@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include <direct.h>
+#include <unistd.h>
 #include <string.h>
+#include <dirent.h>
 
 #define MAX_TOKENS 10
 #define MAX_TOKEN_LEN 50
@@ -24,24 +25,8 @@ Token_list parse_cmd(char *cmd) {
     return list;
 }
 
-char* remove_quotes(char *string) {
-    int read = 0;
-    int write = 0;
-    while(string[read] != '\0') {
-        if(string[read] != '"') {
-            string[write++] = string[read];
-        }
-        read++;
-    }
-    string[write] = '\0';
-    return string;
-}
-
-
-// echo command needs error handling
 void echo (Token_list *cmd) {
-    for (int i = 1; i < cmd->token_count; i++) {
-        remove_quotes(cmd->tokens[i]);        
+    for (int i = 1; i < cmd->token_count; i++) {      
         printf("%s", cmd->tokens[i]);         
         if (i < cmd->token_count - 1) printf(" ");
     }
@@ -51,9 +36,55 @@ void echo (Token_list *cmd) {
 void cwd() {
     char path[BUFFER_SIZE];
     if (getcwd(path, sizeof(path)) != NULL) {
-        printf("%s\n", path);
+        printf("\033[32m%s\033[0m\n", path);
     } else {
         printf("cannot get path!");
+    }
+}
+
+void ls(char* flag) {
+    DIR *dir;
+    struct dirent *ent;
+
+    dir = opendir(".");
+    if (strcmp(flag, "-a") == 0) {
+        while((ent = readdir(dir)) != NULL) {
+            printf("%s\n", ent -> d_name);
+        }
+    }
+    if (strcmp(flag, "*.c") == 0) {
+        while ((ent = readdir(dir)) != NULL) {
+            if ((strcmp(ent -> d_name + strlen(ent -> d_name) - strlen(".c"), ".c")) == 0) {
+                printf("%s\n", ent -> d_name);
+            }
+        }
+    } else if (strcmp(flag, "*.exe") == 0) {
+        while ((ent = readdir(dir)) != NULL) {
+            if ((strcmp(ent -> d_name + strlen(ent -> d_name) - strlen(".exe"), ".exe")) == 0) {
+                printf("%s\n", ent -> d_name);
+            }
+        }
+    }
+    closedir(dir);
+}
+
+void touch(Token_list *cmd) {
+    FILE *file_ptr = NULL;
+    file_ptr = fopen(cmd->tokens[1], "w");
+    if (file_ptr == NULL) {
+        printf("\033[31mFile cannot be created\033[0m\n");
+    } else {
+        printf("File created successfully!\n");
+    }
+    fclose(file_ptr);
+}
+
+void rm(char* file_name) {
+    int status = remove(file_name);
+    if (status == 0) {
+        printf("File successfully deleted.\n");
+    } else {
+        printf("\033[31mNo such file exists.\033[0m\n");
     }
 }
 
@@ -75,17 +106,36 @@ int main() {
 
         Token_list parsed_cmd = parse_cmd(cmd);
 
-        // adding echo command
         if (strcmp(parsed_cmd.tokens[0], "echo") == 0) {
             echo(&parsed_cmd);
-        }
-
-        // adding cwd command
-        if (strcmp(parsed_cmd.tokens[0], "cwd") == 0) {
+        } else if (strcmp(parsed_cmd.tokens[0], "cwd") == 0) {
             if (parsed_cmd.token_count != 1) {
-                printf("ERROR!");
+                printf("\033[31mERROR\033[0m\n");
+            } else {
+                cwd();
             }
-            cwd();
+        } else if (strcmp(parsed_cmd.tokens[0], "ls") == 0) { 
+            if (strcmp(parsed_cmd.tokens[1], "-a") == 0) {
+                ls("-a");
+            } else if (strcmp(parsed_cmd.tokens[1], "*.c") == 0) {
+                ls("*.c");
+            } else if (strcmp(parsed_cmd.tokens[1], "*.exe") == 0) {
+                ls("*.exe");
+            } else if (parsed_cmd.token_count == 1) {
+                printf("\033[31mNO FLAG SPECIFIED\033[0m\n");
+            } else {
+                printf("\033[31mINVALID FLAG\033[0m\n");
+            }
+        } else if (strcmp(parsed_cmd.tokens[0], "touch") == 0) {
+            if (parsed_cmd.token_count == 2) {
+                touch(&parsed_cmd);
+            } else {
+                printf("\033[31mMention name of the file\033[0m\n");
+            }
+        } else if (strcmp(parsed_cmd.tokens[0], "rm") == 0) {
+            rm(parsed_cmd.tokens[1]);
+        } else {
+            printf("\033[31mINVALID COMMAND\033[0m\n");
         }
     }
 
