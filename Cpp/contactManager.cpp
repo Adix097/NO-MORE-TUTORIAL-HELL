@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <iomanip>
 #include <vector>
@@ -52,6 +53,19 @@ class contactManager {
                 cout << endl;
 
             }
+        }
+
+        static void exportCSV() {
+            ofstream file("contacts.csv");
+
+            if (!file) cout << "File could not be opened" << endl;
+
+            file << "Name,Email,Role,Phone Number,Notes\n";
+            for (const auto& person : persons) {
+                file << person->name << "," << person->email << "," << person->role << "," << person->phoneNumber << "," << ((!person->notes.empty()) ? person->notes : "No additional notes have been added") << "\n";
+            }
+
+            cout << "\nSucessfully exported as CSV" << endl;
         }
 
         void addNote(string notes) {
@@ -118,5 +132,6 @@ int main () {
     contactManager person3(7923441393, "Aazad", "shekharaazad13@gmail.com", "CA", "Has good experience");
     person3.getDetails();
     contactManager::printAll();
+    contactManager::exportCSV();
     return 0;
 }
